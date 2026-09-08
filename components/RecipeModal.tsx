@@ -11,6 +11,8 @@ interface RecipeModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSpinAgain?: () => void;
+  isExcludedFromWheel?: boolean;
+  onToggleWheelInclusion?: (recipeId: string) => void;
 }
 
 export function RecipeModal({
@@ -18,6 +20,8 @@ export function RecipeModal({
   isOpen,
   onClose,
   onSpinAgain,
+  isExcludedFromWheel = false,
+  onToggleWheelInclusion,
 }: RecipeModalProps) {
   const [isFav, setIsFav] = useState(false);
   const [checkedIngredients, setCheckedIngredients] = useState<Record<number, boolean>>({});
@@ -84,7 +88,26 @@ export function RecipeModal({
             <span>رجوع</span>
           </button>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
+            {/* Wheel Inclusion Toggle Button */}
+            {onToggleWheelInclusion && (
+              <button
+                type="button"
+                onClick={() => {
+                  soundManager.playTap();
+                  onToggleWheelInclusion(recipe.id);
+                }}
+                className={`py-1 px-2.5 rounded-xl text-xs font-bold transition-all pressable flex items-center gap-1 border ${
+                  !isExcludedFromWheel
+                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                    : 'bg-stone-100 text-stone-500 border-stone-200 hover:bg-stone-200'
+                }`}
+                title={!isExcludedFromWheel ? 'هذا الطبق مفعّل في العجلة' : 'هذا الطبق مستبعد من العجلة'}
+              >
+                <span>{!isExcludedFromWheel ? '🎡 في العجلة' : '🚫 مستبعدة'}</span>
+              </button>
+            )}
+
             {/* Share button */}
             <button
               onClick={handleShare}

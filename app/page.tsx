@@ -4,7 +4,16 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { MealType, Recipe, ViewMode } from '@/types';
 import { RECIPES } from '@/data/recipes';
 import { pickRandomRecipe } from '@/lib/spin';
-import { getStoredFavorites, recordRecentSpin, getCustomRecipes, deleteCustomRecipe } from '@/lib/storage';
+import {
+  getStoredFavorites,
+  recordRecentSpin,
+  getCustomRecipes,
+  deleteCustomRecipe,
+  getExcludedDishIds,
+  toggleDishExclusion,
+  setDishExclusion,
+} from '@/lib/storage';
+import { soundManager } from '@/lib/sound';
 import { MobileFrame } from '@/components/MobileFrame';
 import { Header } from '@/components/Header';
 import { MealSelector } from '@/components/MealSelector';
@@ -16,6 +25,8 @@ import { FavoritesView } from '@/components/FavoritesView';
 import { AllDishesView } from '@/components/AllDishesView';
 import { BottomNav } from '@/components/BottomNav';
 import { AddDishModal } from '@/components/AddDishModal';
+import { WheelManageModal } from '@/components/WheelManageModal';
+import { SlidersHorizontal, Plus } from 'lucide-react';
 
 export default function Home() {
   const [selectedMeal, setSelectedMeal] = useState<MealType>('lunch');
@@ -31,16 +42,20 @@ export default function Home() {
   const [isRecipeModalOpen, setIsRecipeModalOpen] = useState<boolean>(false);
 
   const [isAddDishModalOpen, setIsAddDishModalOpen] = useState<boolean>(false);
+  const [isWheelManageModalOpen, setIsWheelManageModalOpen] = useState<boolean>(false);
+
   const [customRecipes, setCustomRecipes] = useState<Recipe[]>([]);
+  const [excludedDishIds, setExcludedDishIds] = useState<string[]>([]);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const [favoritesCount, setFavoritesCount] = useState<number>(0);
   const [customPool, setCustomPool] = useState<Recipe[] | null>(null);
 
-  // Sync favorites and custom recipes on mount
+  // Sync favorites, custom recipes, and excluded dishes on mount
   const refreshStorage = useCallback(() => {
     setFavoritesCount(getStoredFavorites().length);
     setCustomRecipes(getCustomRecipes());
+    setExcludedDishIds(getExcludedDishIds());
   }, []);
 
   useEffect(() => {
@@ -52,13 +67,20 @@ export default function Home() {
     return [...customRecipes, ...RECIPES];
   }, [customRecipes]);
 
-  // Available recipes on the wheel
+  // All recipes belonging to the currently selected meal category
+  const categoryTotalRecipes = useMemo(() => {
+    return allRecipes.filter((r) => r.mealType === selectedMeal);
+  }, [allRecipes, selectedMeal]);
+
+  // Available recipes currently included on the wheel
   const currentWheelRecipes = useMemo(() => {
     if (customPool && customPool.length >= 2) {
       return customPool;
     }
-    return allRecipes.filter((r) => r.mealType === selectedMeal);
-  }, [selectedMeal, customPool, allRecipes]);
+    const included = categoryTotalRecipes.filter((r) => !excludedDishIds.includes(r.id));
+    // If user excluded almost all, fall back to all category recipes so wheel remains functional
+    return included.length >= 2 ? included : categoryTotalRecipes;
+  }, [customPool, categoryTotalRecipes, excludedDishIds]);
 
   // Start spinning
   const handleStartSpin = useCallback(() => {
@@ -123,19 +145,36 @@ export default function Home() {
   // Custom recipe added
   const handleDishAdded = (newRecipe: Recipe) => {
     setCustomRecipes((prev) => [newRecipe, ...prev.filter((r) => r.id !== newRecipe.id)]);
+    // Ensure newly added recipe is active in wheel
+    setExcludedDishIds((prev) => prev.filter((id) => id !== newRecipe.id));
     setSelectedMeal(newRecipe.mealType);
     setViewMode('wheel');
     setCustomPool(null);
-    setToastMessage(`تمت إضافة "${newRecipe.name}" للعجلة بنجاح! 🎡✨`);
+    setToastMessage(`تمت إضافة "${newRecipe.name}" للعجلة وهي مفعلة الآن! 🎡✨`);
     setTimeout(() => setToastMessage(null), 3500);
   };
 
-  // Delete custom recipe
+  // Delete custom recipe completely
   const handleDeleteCustomRecipe = (recipeId: string) => {
     const updated = deleteCustomRecipe(recipeId);
     setCustomRecipes(updated);
+    setExcludedDishIds((prev) => prev.filter((id) => id !== recipeId));
     setToastMessage('تم حذف الطبق الخاص بنجاح.');
     setTimeout(() => setToastMessage(null), 2500);
+  };
+
+  // Toggle dish inclusion/exclusion on the wheel
+  const handleToggleDishExclusion = (dishId: string) => {
+    const res = toggleDishExclusion(dishId);
+    setExcludedDishIds(res.excluded);
+  };
+
+  // Select all dishes for current category
+  const handleSelectAllDishes = () => {
+    categoryTotalRecipes.forEach((r) => {
+      setDishExclusion(r.id, false);
+    });
+    setExcludedDishIds(getExcludedDishIds());
   };
 
   return (
@@ -160,6 +199,46 @@ export default function Home() {
               onSelectMeal={handleMealChange}
               disabled={isSpinning}
             />
+
+            {/* Wheel Dishes Status & Customization Bar */}
+            <div className="mx-4 mb-1 px-3 py-1.5 bg-stone-100/90 rounded-2xl border border-stone-200/80 flex items-center justify-between text-xs font-bold shadow-xs">
+              <div className="flex items-center gap-1.5 text-stone-700">
+                <span className="text-amber-600">🎡</span>
+                <span>أطباق العجلة:</span>
+                <span className="bg-amber-500 text-white px-2 py-0.5 rounded-full text-[11px] font-black shadow-xs">
+                  {currentWheelRecipes.length} أطباق
+                </span>
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  id="customize-wheel-btn"
+                  onClick={() => {
+                    soundManager.playTap();
+                    setIsWheelManageModalOpen(true);
+                  }}
+                  className="px-2.5 py-1 rounded-xl bg-white hover:bg-stone-50 text-stone-800 border border-stone-300/80 text-[11px] font-extrabold flex items-center gap-1 shadow-xs pressable"
+                  title="تعديل الأطباق المشمولة في العجلة"
+                >
+                  <SlidersHorizontal className="w-3 h-3 text-amber-600" />
+                  <span>تخصيص الأطباق</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    soundManager.playTap();
+                    setIsAddDishModalOpen(true);
+                  }}
+                  className="px-2 py-1 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-[11px] font-black flex items-center gap-1 shadow-xs pressable"
+                  title="إضافة طبقك المخصوص"
+                >
+                  <Plus className="w-3 h-3" />
+                  <span>أكلة</span>
+                </button>
+              </div>
+            </div>
 
             {/* Custom favorites filter indicator */}
             {customPool && (
@@ -246,6 +325,10 @@ export default function Home() {
           refreshStorage();
         }}
         onSpinAgain={handleSpinAgain}
+        isExcludedFromWheel={
+          activeRecipeForModal ? excludedDishIds.includes(activeRecipeForModal.id) : false
+        }
+        onToggleWheelInclusion={handleToggleDishExclusion}
       />
 
       {/* Add Custom Dish Modal */}
@@ -255,7 +338,19 @@ export default function Home() {
         onDishAdded={handleDishAdded}
         initialMealType={selectedMeal}
       />
+
+      {/* Wheel Dishes Customization Modal */}
+      <WheelManageModal
+        isOpen={isWheelManageModalOpen}
+        onClose={() => setIsWheelManageModalOpen(false)}
+        categoryRecipes={categoryTotalRecipes}
+        excludedDishIds={excludedDishIds}
+        onToggleDish={handleToggleDishExclusion}
+        onSelectAll={handleSelectAllDishes}
+        onOpenAddDish={() => setIsAddDishModalOpen(true)}
+        onDeleteCustomDish={handleDeleteCustomRecipe}
+        selectedMeal={selectedMeal}
+      />
     </MobileFrame>
   );
 }
-
