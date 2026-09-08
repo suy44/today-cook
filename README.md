@@ -1,36 +1,78 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# واش نطيب اليوم؟ 🇩🇿 (Wash Ntayeb Elyoum?)
 
-## Getting Started
+تطبيق ويب تفاعلي موجه للهواتف الذكية بالدارجة الجزائرية، يحل حيرة كل يوم: **"واش نطيب اليوم؟"**. بدلاً من البحث المعقد، كل ما عليك هو تدوير عجلة الحظ (Spin Wheel) لتقترح عليك طبقاً لذيذاً مع الوصفة والمقادير ونصائح الحراير!
 
-First, run the development server:
+![Wash Ntayeb Elyoum](public/favicon.ico)
 
+---
+
+## ✨ المميزات الرئيسية (Key Features)
+
+- 🎡 **عجلة حظ تفاعلية وسلسة (Smooth Spin Wheel)**:
+  - محرك دوران عالي الدقة مبني على HTML5 Canvas مع فيزياء إبطاء واقعية ومؤشر متذبذب.
+  - نقرات دوران تفاعلية واقعية (Mechanical Ticks) ونغمة احتفال فوز مولدة عبر **Web Audio API** (تعمل دون إنترنت بنسبة 100%).
+  - زر تشغيل / كتم الصوت وحفظ التفضيل.
+
+- 🍲 **أكثر من 40 طبقاً جزائرياً أصيلاً (40+ Authentic Algerian Recipes)**:
+  - **🌅 فطور الصباح**: محاجب حارين، مسمن مورق، بغرير مشهد، شكشوكة بيض، خفاف/سفنج، طمينة...
+  - **🍛 غداء بنين**: شخشوخة بسكرية، كسكسي باللحم، رشتة عاصمية، طاجين الزيتون، طاجين الجلبانة، شربة فريك، دوبارة، تليتلي، لوبيا، عدس، دولمة سردين...
+  - **🌙 عشاء خفيف**: كوكا مورقة، بطاطا كوشة، غراتان دجاج، بريك عنابي، سفيرية عاصمية، حساء خضر، كبدة مشرملة، بيتزا كاري...
+  - **☕ حاجة خفيفة / قهوة عصر**: كرانطيطا وهران، قلب اللوز، كروكي زمان، موسكوتشو، بوراك مقرمش، مقروط الكوشة...
+
+- 👩‍🍳 **بطاقة الوصفة التفاعلية (Interactive Recipe Details)**:
+  - الوقت وعدد الأشخاص ومستوى الصعوبة.
+  - قائمة مقادير قابلة للشطب (Checklist) لمعرفة ما يتوفر لديك في المطبخ.
+  - طريقة التحضير خطوة بخطوة بالدارجة الجزائرية المبسطة.
+  - **💡 نصيحة الحراير**: أسرار الطهي التقليدي لضمان نجاح الطبق.
+  - إمكانية مشاركة الوصفة أو نسخها مباشرة.
+
+- ❤️ **المفضلة (Favorites)**:
+  - حفظ الأطباق المفضلة في المتصفح محلياً (`localStorage`).
+  - ميزة الدوران الحصري بين الأطباق المفضلة فقط!
+
+- 📱 **تصميم Mobile-First بالكامل**:
+  - تخطيط عربي أصيل RTL.
+  - خط عربي مريح للقراءة (`Cairo`).
+  - متجاوب 100% مع كافة أحجام الهواتف (320px إلى 480px) مع إطار هاتف أنيق على شاشات الحاسوب.
+  - صفر تمرير أفقي ومراعاة Safe Area في هواتف iPhone.
+
+---
+
+## 🛠️ التقنيات المستخدمة (Tech Stack)
+
+- **Framework**: [Next.js 16 (App Router)](https://nextjs.org/)
+- **Language**: [TypeScript](https://www.typescriptlang.org/)
+- **Styling**: [Tailwind CSS v4](https://tailwindcss.com/)
+- **Icons**: [Lucide React](https://lucide.dev/)
+- **Celebration FX**: [Canvas Confetti](https://www.npmjs.com/package/canvas-confetti)
+- **Audio Engine**: Web Audio API Procedural Synthesizer
+- **Storage**: LocalStorage API
+
+---
+
+## 🚀 التشغيل المحلي (Getting Started)
+
+1. استنسخ المستودع (Clone the repository):
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone https://github.com/suy44/today-cook.git
+cd today-cook
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. ثبّت الحزم (Install dependencies):
+```bash
+npm install
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+3. شغّل خادم التطوير (Run dev server):
+```bash
+npm run dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+افتح الرابط [http://localhost:3000](http://localhost:3000) في المتصفح.
 
-## Learn More
+---
 
-To learn more about Next.js, take a look at the following resources:
+## 📄 الترخيص (License)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+هذا المشروع مفتوح المصدر تحت ترخيص MIT.
+صنع بحب للمطبخ الجزائري الأصيل 🇩🇿❤️

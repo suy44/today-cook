@@ -1,69 +1,213 @@
-import Image from "next/image";
+'use client';
+
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { MealType, Recipe, ViewMode } from '@/types';
+import { RECIPES } from '@/data/recipes';
+import { pickRandomRecipe } from '@/lib/spin';
+import { getStoredFavorites, recordRecentSpin } from '@/lib/storage';
+import { MobileFrame } from '@/components/MobileFrame';
+import { Header } from '@/components/Header';
+import { MealSelector } from '@/components/MealSelector';
+import { SpinWheel } from '@/components/SpinWheel';
+import { SpinButton } from '@/components/SpinButton';
+import { ResultModal } from '@/components/ResultModal';
+import { RecipeModal } from '@/components/RecipeModal';
+import { FavoritesView } from '@/components/FavoritesView';
+import { AllDishesView } from '@/components/AllDishesView';
+import { BottomNav } from '@/components/BottomNav';
 
 export default function Home() {
+  const [selectedMeal, setSelectedMeal] = useState<MealType>('lunch');
+  const [viewMode, setViewMode] = useState<ViewMode>('wheel');
+
+  const [isSpinning, setIsSpinning] = useState<boolean>(false);
+  const [targetRecipe, setTargetRecipe] = useState<Recipe | null>(null);
+
+  const [resultRecipe, setResultRecipe] = useState<Recipe | null>(null);
+  const [isResultModalOpen, setIsResultModalOpen] = useState<boolean>(false);
+
+  const [activeRecipeForModal, setActiveRecipeForModal] = useState<Recipe | null>(null);
+  const [isRecipeModalOpen, setIsRecipeModalOpen] = useState<boolean>(false);
+
+  const [favoritesCount, setFavoritesCount] = useState<number>(0);
+  const [customPool, setCustomPool] = useState<Recipe[] | null>(null);
+
+  // Sync favorites count
+  const refreshFavorites = useCallback(() => {
+    setFavoritesCount(getStoredFavorites().length);
+  }, []);
+
+  useEffect(() => {
+    refreshFavorites();
+  }, [refreshFavorites]);
+
+  // Available recipes on the wheel
+  const currentWheelRecipes = useMemo(() => {
+    if (customPool && customPool.length >= 2) {
+      return customPool;
+    }
+    return RECIPES.filter((r) => r.mealType === selectedMeal);
+  }, [selectedMeal, customPool]);
+
+  // Start spinning
+  const handleStartSpin = useCallback(() => {
+    if (isSpinning || currentWheelRecipes.length === 0) return;
+
+    try {
+      const { recipe } = pickRandomRecipe(currentWheelRecipes);
+      setTargetRecipe(recipe);
+      setIsSpinning(true);
+      setIsResultModalOpen(false);
+    } catch {
+      // Fallback
+      if (currentWheelRecipes[0]) {
+        setTargetRecipe(currentWheelRecipes[0]);
+        setIsSpinning(true);
+      }
+    }
+  }, [isSpinning, currentWheelRecipes]);
+
+  // Spin completed
+  const handleSpinEnd = useCallback(
+    (recipe: Recipe) => {
+      setIsSpinning(false);
+      setResultRecipe(recipe);
+      recordRecentSpin(recipe.id);
+      setIsResultModalOpen(true);
+    },
+    []
+  );
+
+  // View recipe detail
+  const handleOpenRecipeDetail = (recipe: Recipe) => {
+    setIsResultModalOpen(false);
+    setActiveRecipeForModal(recipe);
+    setIsRecipeModalOpen(true);
+  };
+
+  // Re-spin action from result modal or recipe modal
+  const handleSpinAgain = () => {
+    setIsResultModalOpen(false);
+    setIsRecipeModalOpen(false);
+    // Smooth delay before launching next spin
+    setTimeout(() => {
+      handleStartSpin();
+    }, 200);
+  };
+
+  // Reset custom pool if meal changes
+  const handleMealChange = (meal: MealType) => {
+    setCustomPool(null);
+    setSelectedMeal(meal);
+  };
+
+  // Spin exclusively among favorites
+  const handleSpinFavorites = (favs: Recipe[]) => {
+    setCustomPool(favs);
+    setViewMode('wheel');
+    setTimeout(() => {
+      handleStartSpin();
+    }, 250);
+  };
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
+    <MobileFrame>
+      {/* Top Header */}
+      <Header />
+
+      {/* Main Screen Views */}
+      <div className="flex-1 flex flex-col overflow-y-auto no-scrollbar relative">
+        {viewMode === 'wheel' && (
+          <div className="flex-1 flex flex-col justify-between py-1">
+            {/* Meal Category Selector */}
+            <MealSelector
+              selectedMeal={selectedMeal}
+              onSelectMeal={handleMealChange}
+              disabled={isSpinning}
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+
+            {/* Custom favorites filter indicator */}
+            {customPool && (
+              <div className="mx-4 mb-1 p-2 rounded-xl bg-rose-50 border border-rose-200 flex items-center justify-between text-xs font-bold text-rose-700">
+                <span>🎡 العجلة تدور بين أطباقك المفضلة فقط ({customPool.length})</span>
+                <button
+                  onClick={() => setCustomPool(null)}
+                  className="underline text-stone-600 hover:text-stone-900"
+                >
+                  إلغاء
+                </button>
+              </div>
+            )}
+
+            {/* Centerpiece Spin Wheel */}
+            <div className="flex-1 flex items-center justify-center my-auto">
+              <SpinWheel
+                recipes={currentWheelRecipes}
+                isSpinning={isSpinning}
+                targetRecipe={targetRecipe}
+                onSpinStart={handleStartSpin}
+                onSpinEnd={handleSpinEnd}
+              />
+            </div>
+
+            {/* Big Tactile Spin CTA Button */}
+            <div className="pb-2">
+              <SpinButton
+                isSpinning={isSpinning}
+                onSpin={handleStartSpin}
+                disabled={currentWheelRecipes.length === 0}
+              />
+            </div>
+          </div>
+        )}
+
+        {viewMode === 'favorites' && (
+          <FavoritesView
+            onSelectRecipe={handleOpenRecipeDetail}
+            onBackToWheel={() => setViewMode('wheel')}
+            onSpinFromFavorites={handleSpinFavorites}
+          />
+        )}
+
+        {viewMode === 'all' && (
+          <AllDishesView
+            onSelectRecipe={handleOpenRecipeDetail}
+            onBackToWheel={() => setViewMode('wheel')}
+          />
+        )}
+      </div>
+
+      {/* Bottom Navigation */}
+      <BottomNav
+        currentView={viewMode}
+        onViewChange={(mode) => {
+          if (!isSpinning) {
+            setViewMode(mode);
+            refreshFavorites();
+          }
+        }}
+        favoritesCount={favoritesCount}
+      />
+
+      {/* Result Modal with Confetti */}
+      <ResultModal
+        recipe={resultRecipe}
+        isOpen={isResultModalOpen}
+        onClose={() => setIsResultModalOpen(false)}
+        onViewRecipe={handleOpenRecipeDetail}
+        onSpinAgain={handleSpinAgain}
+      />
+
+      {/* Recipe Details Modal */}
+      <RecipeModal
+        recipe={activeRecipeForModal}
+        isOpen={isRecipeModalOpen}
+        onClose={() => {
+          setIsRecipeModalOpen(false);
+          refreshFavorites();
+        }}
+        onSpinAgain={handleSpinAgain}
+      />
+    </MobileFrame>
   );
 }
