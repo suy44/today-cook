@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { MealType, Recipe, ViewMode } from '@/types';
 import { RECIPES } from '@/data/recipes';
 import { pickRandomRecipe } from '@/lib/spin';
-import { getStoredFavorites, recordRecentSpin } from '@/lib/storage';
+import { getStoredFavorites, recordRecentSpin, getCustomRecipes, deleteCustomRecipe } from '@/lib/storage';
 import { MobileFrame } from '@/components/MobileFrame';
 import { Header } from '@/components/Header';
 import { MealSelector } from '@/components/MealSelector';
@@ -15,6 +15,7 @@ import { RecipeModal } from '@/components/RecipeModal';
 import { FavoritesView } from '@/components/FavoritesView';
 import { AllDishesView } from '@/components/AllDishesView';
 import { BottomNav } from '@/components/BottomNav';
+import { AddDishModal } from '@/components/AddDishModal';
 
 export default function Home() {
   const [selectedMeal, setSelectedMeal] = useState<MealType>('lunch');
@@ -29,25 +30,35 @@ export default function Home() {
   const [activeRecipeForModal, setActiveRecipeForModal] = useState<Recipe | null>(null);
   const [isRecipeModalOpen, setIsRecipeModalOpen] = useState<boolean>(false);
 
+  const [isAddDishModalOpen, setIsAddDishModalOpen] = useState<boolean>(false);
+  const [customRecipes, setCustomRecipes] = useState<Recipe[]>([]);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
   const [favoritesCount, setFavoritesCount] = useState<number>(0);
   const [customPool, setCustomPool] = useState<Recipe[] | null>(null);
 
-  // Sync favorites count
-  const refreshFavorites = useCallback(() => {
+  // Sync favorites and custom recipes on mount
+  const refreshStorage = useCallback(() => {
     setFavoritesCount(getStoredFavorites().length);
+    setCustomRecipes(getCustomRecipes());
   }, []);
 
   useEffect(() => {
-    refreshFavorites();
-  }, [refreshFavorites]);
+    refreshStorage();
+  }, [refreshStorage]);
+
+  // Combined recipes: User's custom recipes + default Algerian recipes
+  const allRecipes = useMemo(() => {
+    return [...customRecipes, ...RECIPES];
+  }, [customRecipes]);
 
   // Available recipes on the wheel
   const currentWheelRecipes = useMemo(() => {
     if (customPool && customPool.length >= 2) {
       return customPool;
     }
-    return RECIPES.filter((r) => r.mealType === selectedMeal);
-  }, [selectedMeal, customPool]);
+    return allRecipes.filter((r) => r.mealType === selectedMeal);
+  }, [selectedMeal, customPool, allRecipes]);
 
   // Start spinning
   const handleStartSpin = useCallback(() => {
@@ -89,7 +100,6 @@ export default function Home() {
   const handleSpinAgain = () => {
     setIsResultModalOpen(false);
     setIsRecipeModalOpen(false);
-    // Smooth delay before launching next spin
     setTimeout(() => {
       handleStartSpin();
     }, 200);
@@ -110,10 +120,35 @@ export default function Home() {
     }, 250);
   };
 
+  // Custom recipe added
+  const handleDishAdded = (newRecipe: Recipe) => {
+    setCustomRecipes((prev) => [newRecipe, ...prev.filter((r) => r.id !== newRecipe.id)]);
+    setSelectedMeal(newRecipe.mealType);
+    setViewMode('wheel');
+    setCustomPool(null);
+    setToastMessage(`تمت إضافة "${newRecipe.name}" للعجلة بنجاح! 🎡✨`);
+    setTimeout(() => setToastMessage(null), 3500);
+  };
+
+  // Delete custom recipe
+  const handleDeleteCustomRecipe = (recipeId: string) => {
+    const updated = deleteCustomRecipe(recipeId);
+    setCustomRecipes(updated);
+    setToastMessage('تم حذف الطبق الخاص بنجاح.');
+    setTimeout(() => setToastMessage(null), 2500);
+  };
+
   return (
     <MobileFrame>
       {/* Top Header */}
-      <Header />
+      <Header onOpenAddDish={() => setIsAddDishModalOpen(true)} />
+
+      {/* Floating Notification Toast */}
+      {toastMessage && (
+        <div className="mx-4 mt-2 p-2.5 rounded-2xl bg-emerald-600 text-white text-xs font-bold text-center shadow-lg animate-in fade-in slide-in-from-top-2 duration-200 z-30">
+          {toastMessage}
+        </div>
+      )}
 
       {/* Main Screen Views */}
       <div className="flex-1 flex flex-col overflow-y-auto no-scrollbar relative">
@@ -171,8 +206,11 @@ export default function Home() {
 
         {viewMode === 'all' && (
           <AllDishesView
+            recipes={allRecipes}
             onSelectRecipe={handleOpenRecipeDetail}
             onBackToWheel={() => setViewMode('wheel')}
+            onOpenAddDish={() => setIsAddDishModalOpen(true)}
+            onDeleteCustomRecipe={handleDeleteCustomRecipe}
           />
         )}
       </div>
@@ -183,7 +221,7 @@ export default function Home() {
         onViewChange={(mode) => {
           if (!isSpinning) {
             setViewMode(mode);
-            refreshFavorites();
+            refreshStorage();
           }
         }}
         favoritesCount={favoritesCount}
@@ -204,10 +242,19 @@ export default function Home() {
         isOpen={isRecipeModalOpen}
         onClose={() => {
           setIsRecipeModalOpen(false);
-          refreshFavorites();
+          refreshStorage();
         }}
         onSpinAgain={handleSpinAgain}
+      />
+
+      {/* Add Custom Dish Modal */}
+      <AddDishModal
+        isOpen={isAddDishModalOpen}
+        onClose={() => setIsAddDishModalOpen(false)}
+        onDishAdded={handleDishAdded}
+        initialMealType={selectedMeal}
       />
     </MobileFrame>
   );
 }
+
