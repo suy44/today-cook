@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import confetti from 'canvas-confetti';
 import { Recipe } from '@/types';
-import { Heart, RotateCw, BookOpen, Clock, Users, X } from 'lucide-react';
+import { Heart, RotateCw, BookOpen, Clock, Users, X, Plus, Sparkles, ChefHat } from 'lucide-react';
 import { isStoredFavorite, toggleStoredFavorite } from '@/lib/storage';
 import { soundManager } from '@/lib/sound';
 
@@ -13,6 +13,7 @@ interface ResultModalProps {
   onClose: () => void;
   onViewRecipe: (recipe: Recipe) => void;
   onSpinAgain: () => void;
+  onOpenAddDish?: () => void;
 }
 
 export function ResultModal({
@@ -21,6 +22,7 @@ export function ResultModal({
   onClose,
   onViewRecipe,
   onSpinAgain,
+  onOpenAddDish,
 }: ResultModalProps) {
   const [isFav, setIsFav] = useState(false);
 
@@ -97,7 +99,7 @@ export function ResultModal({
         </p>
 
         {/* Quick Info Badges */}
-        <div className="flex items-center justify-center gap-2 mb-5 text-xs font-bold text-stone-700">
+        <div className="flex items-center justify-center gap-2 mb-4 text-xs font-bold text-stone-700">
           <div className="flex items-center gap-1 bg-white px-2.5 py-1.5 rounded-xl border border-stone-200 shadow-xs">
             <Clock className="w-3.5 h-3.5 text-amber-600" />
             <span>{recipe.totalTime}</span>
@@ -156,8 +158,34 @@ export function ResultModal({
               <span>{isFav ? 'محفوظة ❤️' : 'حفظ ♡'}</span>
             </button>
           </div>
+
+          {/* New Feature Suggestion Banner */}
+          {onOpenAddDish && (
+            <div className="pt-2 border-t border-amber-200/80 mt-2">
+              <button
+                id="suggest-add-dish-btn"
+                type="button"
+                onClick={() => {
+                  soundManager.playTap();
+                  onClose();
+                  onOpenAddDish();
+                }}
+                className="w-full py-2.5 px-3 rounded-2xl bg-amber-100/90 hover:bg-amber-200/90 border border-amber-300 text-amber-950 text-xs font-bold flex items-center justify-between transition-all pressable group shadow-xs"
+              >
+                <div className="flex items-center gap-1.5">
+                  <span className="text-base animate-bounce-subtle">✨</span>
+                  <span className="text-amber-900 font-extrabold">عندك أكلتك الخاصة؟</span>
+                </div>
+                <div className="bg-gradient-to-r from-amber-500 to-orange-500 text-white px-2.5 py-1 rounded-xl text-[11px] font-black flex items-center gap-1 shadow-xs group-hover:scale-105 transition-transform">
+                  <Plus className="w-3 h-3" />
+                  <span>زيديها للعجلة 👩‍🍳</span>
+                </div>
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
 }
+

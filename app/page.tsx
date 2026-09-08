@@ -234,6 +234,7 @@ export default function Home() {
         onClose={() => setIsResultModalOpen(false)}
         onViewRecipe={handleOpenRecipeDetail}
         onSpinAgain={handleSpinAgain}
+        onOpenAddDish={() => setIsAddDishModalOpen(true)}
       />
 
       {/* Recipe Details Modal */}
